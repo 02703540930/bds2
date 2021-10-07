@@ -3,8 +3,6 @@ package com.devsuperior.bds02.services;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -15,8 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.devsuperior.bds02.dto.EventDTO;
 import com.devsuperior.bds02.entities.City;
 import com.devsuperior.bds02.entities.Event;
-import com.devsuperior.bds02.repositories.CityRepository;
 import com.devsuperior.bds02.repositories.EventRepository;
+import com.devsuperior.bds02.services.exceptions.BadRequestException;
 import com.devsuperior.bds02.services.exceptions.DatabaseException;
 import com.devsuperior.bds02.services.exceptions.ResourceNotFoundException;
 
@@ -24,8 +22,8 @@ import com.devsuperior.bds02.services.exceptions.ResourceNotFoundException;
 public class EventService {
 
 	@Autowired
-	private EventRepository repository;	
-	
+	private EventRepository repository;
+
 	@Transactional(readOnly = true)
 	public List<EventDTO> findAll() {
 		List<Event> list = repository.findAll(Sort.by("name"));
@@ -45,8 +43,7 @@ public class EventService {
 		entity = repository.save(entity);
 		return new EventDTO(entity);
 	}
-
-	@Transactional
+	
 	public void delete(Long id) {
 		try {
 			repository.deleteById(id);
@@ -54,6 +51,8 @@ public class EventService {
 			throw new ResourceNotFoundException("Id not found " + id); // criada no services.exceptions
 		} catch (DataIntegrityViolationException e) {
 			throw new DatabaseException("Integrity Violation"); // criada no services.exceptions
+		} catch (BadRequestException e) {
+			throw new BadRequestException("Bad Request");
 		}
 	}
 
@@ -65,8 +64,12 @@ public class EventService {
 			copyDtotoEntity(dto, entity);
 			entity = repository.save(entity);
 			return new EventDTO(entity);
-		} catch (EntityNotFoundException e) {
-			throw new ResourceNotFoundException("Id not found " + id);
+		} catch (EmptyResultDataAccessException e) {
+			throw new ResourceNotFoundException("Id not found " + id); // criada no services.exceptions e no controller.exceptions handlers
+		} catch (DataIntegrityViolationException e) {
+			throw new DatabaseException("Integrity Violation"); // criada no services.exceptions e no controller.exceptions handlers
+		} catch (BadRequestException e) {
+			throw new BadRequestException("Bad Request");
 		}
 	}
 
@@ -78,5 +81,4 @@ public class EventService {
 		entity.setUrl(dto.getUrl());
 		entity.setCity(new City(dto.getCityId(), null));
 	}
-
 }
